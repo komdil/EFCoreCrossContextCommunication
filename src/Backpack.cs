@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Infrastructure;
+using System;
 
 namespace EFCoreCrossContextCommunication
 {
@@ -25,7 +26,7 @@ namespace EFCoreCrossContextCommunication
                 student = value;
             }
         }
-        public Guid? StudentId { get; set; }
+        internal Guid? StudentId { get; set; }
 
         public string Name { get; set; }
     }

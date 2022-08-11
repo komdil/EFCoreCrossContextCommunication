@@ -1,8 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore.Infrastructure;
+using System;
 
 namespace EFCoreCrossContextCommunication
 {
-    public class EntityBase
+    public abstract class EntityBase
     {
         protected EntityBase(ILazyLoader lazyLoader)
         {

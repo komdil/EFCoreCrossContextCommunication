@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Infrastructure;
+using System;
 
 namespace EFCoreCrossContextCommunication
 {

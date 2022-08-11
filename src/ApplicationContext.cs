@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace EFCoreCrossContextCommunication
 {
@@ -32,7 +34,30 @@ namespace EFCoreCrossContextCommunication
             var entry = ChangeTracker.Entries<EntityBase>().FirstOrDefault(s => s.Entity.Id == entityToUpdate.Id);
             if (entry != null)
             {
+                var navigationEntitiesThatNeedsToBeLoaded = entry.Navigations.Where(s => s.IsLoaded).ToList();
+                entry.State = EntityState.Detached;
+                foreach (var navigation in navigationEntitiesThatNeedsToBeLoaded)
+                {
+                    navigation.CurrentValue = null;
+                    navigation.IsLoaded = false;
+                }
                 entry.Reload();
+                foreach (var navigation in navigationEntitiesThatNeedsToBeLoaded)
+                {
+                    navigation.Load();
+                }
+
+                foreach (var source in entry.Collections)
+                {
+                    if (source.CurrentValue != null)
+                    {
+                        foreach (var item in source.CurrentValue)
+                            source.EntityEntry.Context.Entry(item).State = EntityState.Detached;
+                        source.CurrentValue = null;
+                    }
+                    source.IsLoaded = false;
+                    source.Load();
+                }
             }
         }
 
@@ -43,7 +68,24 @@ namespace EFCoreCrossContextCommunication
 
         public override int SaveChanges()
         {
-            var modifiedEntities = ChangeTracker.Entries<EntityBase>().Where(s => s.State == EntityState.Modified).Select(s => s.Entity).ToList();
+            var modifiedEntities = new List<EntityBase>();
+            foreach (var entity in ChangeTracker.Entries<EntityBase>())
+            {
+                if (entity.State == EntityState.Modified)
+                {
+                    modifiedEntities.Add(entity.Entity);
+                }
+                else if (entity.State == EntityState.Added || entity.State == EntityState.Deleted)
+                {
+                    foreach (var item in entity.References)
+                    {
+                        if (item.TargetEntry.State == EntityState.Unchanged && item.TargetEntry.Entity is EntityBase entityBaseTargetEntity)
+                        {
+                            modifiedEntities.Add(entityBaseTargetEntity);
+                        }
+                    }
+                }
+            }
             var res = base.SaveChanges();
             ApplicationSession.UpdateContexts(this, modifiedEntities);
             return res;
